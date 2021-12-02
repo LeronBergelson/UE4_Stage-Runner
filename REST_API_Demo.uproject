@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "4.27",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "REST_API_Demo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
