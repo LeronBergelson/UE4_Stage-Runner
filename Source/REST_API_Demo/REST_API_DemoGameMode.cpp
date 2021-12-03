@@ -18,7 +18,7 @@ AREST_API_DemoGameMode::AREST_API_DemoGameMode()
 }
 
 void AREST_API_DemoGameMode::PostLogin(APlayerController* NewPlayer) {
-	Super::PostLogin(NewPlayer);
+	//Super::PostLogin(NewPlayer);
     
     if(ADemoPlayerController* PC = Cast<ADemoPlayerController>(NewPlayer))
     {

@@ -3,6 +3,7 @@
 
 #include "DemoPlayerController.h"
 #include "JsonObjectConverter.h"
+#include "REST_API_DEMO/REST_API_DemoGameMode.h"
 
 ADemoPlayerController::ADemoPlayerController(){
 	Http = &FHttpModule::Get();
@@ -25,16 +26,19 @@ void ADemoPlayerController::HandleServerEntry(){
     if(!HasAuthority()){
         return;
     }
+    
+    FString PID = "1234";
 
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 
     // Get Request
 	Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
-	Request->SetURL("http://localhost:8080/api/PlayerData");
-	Request->SetVerb("POST"); // Post Request
-	//	Request->SetVerb("GET"); //Get Request
+	Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
+	//Request->SetVerb("POST"); // Post Request
+	Request->SetVerb("GET"); //Get Request
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
    
+    /*
     // Post Request Code {	
 	FString JsonString;
 	FPlayerData PlayerData;
@@ -48,17 +52,60 @@ void ADemoPlayerController::HandleServerEntry(){
     UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
     // }
     
+    */
+    
 	Request->ProcessRequest();
 }
 
 void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success)
 {
+    //Sets Middle map location
+    FVector Location = FVector::ZeroVector;
+    Location.Z = 400.0f;
+   
     if(Success)
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s"), *Response->GetContentAsString());
+        UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
+        // setup pawn
+        
+        FPlayerData PlayerData = ConvertToPlayerData(Response->GetContentAsString());
+        
+        // if is valid, sets player location based on retrieved values  
+        if(PlayerData.isvalid){
+           UE_LOG(LogTemp, Warning, TEXT("SUCCESS %f"), PlayerData.Zcoord);
+           Location.X = PlayerData.Xcoord;
+           Location.Y = PlayerData.Ycoord;
+           Location.Z = PlayerData.Zcoord;
+        }
     }
     else
     {
+    // spawn new pawnn at dafual location
+
         UE_LOG(LogTemp, Warning, TEXT("FAILED"));
     }
+    
+    if(AREST_API_DemoGameMode* GM = GetWorld()->GetAuthGameMode<AREST_API_DemoGameMode>())
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = this;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                
+        if(APawn* NewPawn = GetWorld()->SpawnActor<APawn>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
+        {
+            Possess(NewPawn);
+        }
+    }
+}
+
+FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseString)
+{
+    FPlayerData PlayerData;
+    
+    if(!ResponseString.Contains("timestamp"))
+    {
+        FJsonObjectConverter::JsonObjectStringToUStruct(*ResponseString, &PlayerData, 0, 0);
+    }
+    
+    return PlayerData;
 }

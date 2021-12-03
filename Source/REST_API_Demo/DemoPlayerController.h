@@ -15,6 +15,8 @@ struct FPlayerData
 	UPROPERTY()
 	bool isvalid = false; //requires lowercase
 	UPROPERTY()
+	int pid = -1;
+	UPROPERTY()
 	float Xcoord = 0.0f;
 	UPROPERTY()
 	float Ycoord = 0.0f;
@@ -35,4 +37,5 @@ public:
 protected:
 	FHttpModule* Http;
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
+	FPlayerData ConvertToPlayerData(const FString& ResponseString);
 };
