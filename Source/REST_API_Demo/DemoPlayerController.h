@@ -17,6 +17,8 @@ struct FPlayerData
 	UPROPERTY()
 	int pid = -1;
 	UPROPERTY()
+	float Health = 100.0f;
+	UPROPERTY()
 	float Xcoord = 0.0f;
 	UPROPERTY()
 	float Ycoord = 0.0f;

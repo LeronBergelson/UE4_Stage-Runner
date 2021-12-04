@@ -2,8 +2,9 @@
 
 
 #include "DemoPlayerController.h"
-#include "JsonObjectConverter.h"
+#include "REST_API_DEMO/REST_API_DemoCharacter.h"
 #include "REST_API_DEMO/REST_API_DemoGameMode.h"
+#include "JsonObjectConverter.h"
 
 ADemoPlayerController::ADemoPlayerController(){
 	Http = &FHttpModule::Get();
@@ -62,13 +63,14 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
     //Sets Middle map location
     FVector Location = FVector::ZeroVector;
     Location.Z = 400.0f;
+    FPlayerData PlayerData;
    
     if(Success)
     {
         UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
         // setup pawn
         
-        FPlayerData PlayerData = ConvertToPlayerData(Response->GetContentAsString());
+        PlayerData = ConvertToPlayerData(Response->GetContentAsString()); // Converts Contents in Json string to PlayerData Struct
         
         // if is valid, sets player location based on retrieved values  
         if(PlayerData.isvalid){
@@ -91,8 +93,9 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
         SpawnParams.Owner = this;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
                 
-        if(APawn* NewPawn = GetWorld()->SpawnActor<APawn>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
+        if(AREST_API_DemoCharacter* NewPawn = GetWorld()->SpawnActor<AREST_API_DemoCharacter>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
         {
+            NewPawn->SetHealth(PlayerData.Health);
             Possess(NewPawn);
         }
     }

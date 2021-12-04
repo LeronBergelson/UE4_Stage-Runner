@@ -8,7 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
-
+#include "Net/UnrealNetwork.h"
 //////////////////////////////////////////////////////////////////////////
 // AREST_API_DemoCharacter
 
@@ -45,6 +45,8 @@ AREST_API_DemoCharacter::AREST_API_DemoCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	
+	Health = 100.0f;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -67,35 +69,32 @@ void AREST_API_DemoCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAxis("TurnRate", this, &AREST_API_DemoCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AREST_API_DemoCharacter::LookUpAtRate);
-
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AREST_API_DemoCharacter::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AREST_API_DemoCharacter::TouchStopped);
-
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AREST_API_DemoCharacter::OnResetVR);
 }
 
-
-void AREST_API_DemoCharacter::OnResetVR()
+void AREST_API_DemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	// If REST_API_Demo is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in REST_API_Demo.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(AREST_API_DemoCharacter, Health);
 }
 
-void AREST_API_DemoCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
+bool AREST_API_DemoCharacter::Server_SetHealth_Validate(float NewHealth)
 {
-		Jump();
+    return true;
 }
 
-void AREST_API_DemoCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
+void AREST_API_DemoCharacter::Server_SetHealth_Implementation(float NewHealth)
 {
-		StopJumping();
+    SetHealth(NewHealth);
+}
+
+void AREST_API_DemoCharacter::SetHealth(float NewHealth){
+
+    if(HasAuthority()){ // Check if sever
+        Health = NewHealth; // set health
+    }
+    else{ // if we are the client
+        Server_SetHealth(NewHealth); // call Server_SetHealth()
+    }
 }
 
 void AREST_API_DemoCharacter::TurnAtRate(float Rate)
