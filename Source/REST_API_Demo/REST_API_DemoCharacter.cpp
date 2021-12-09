@@ -137,3 +137,4 @@ void AREST_API_DemoCharacter::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
+

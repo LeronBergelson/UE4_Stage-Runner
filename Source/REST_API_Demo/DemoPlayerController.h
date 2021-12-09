@@ -13,6 +13,10 @@ struct FPlayerData
 {
 	GENERATED_BODY()
 	UPROPERTY()
+    FString email = ""; 
+    UPROPERTY()
+    FString userpassword = ""; 
+	UPROPERTY()
 	bool isvalid = false; //requires lowercase
 	UPROPERTY()
 	int pid = -1;
@@ -40,4 +44,5 @@ protected:
 	FHttpModule* Http;
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
+	void SaveData();
 };

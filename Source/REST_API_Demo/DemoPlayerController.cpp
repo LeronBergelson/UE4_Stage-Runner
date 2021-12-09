@@ -19,6 +19,8 @@ void ADemoPlayerController::BeginPlay(){
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("RUNNING ON SERVER"));
+        FTimerHandle TSaveHandle;
+        GetWorldTimerManager().SetTimer(TSaveHandle, this, &ADemoPlayerController::SaveData, 5.0f, true);
     }
 }
 
@@ -28,32 +30,32 @@ void ADemoPlayerController::HandleServerEntry(){
         return;
     }
     
-    FString PID = "1234";
+    //FString PID = "1234";
 
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
-
-    // Get Request
+	
 	Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
-	Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
-	//Request->SetVerb("POST"); // Post Request
-	Request->SetVerb("GET"); //Get Request
+	
+	// GET Request 
+	//Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
+	//Request->SetVerb("GET"); //Get Request
+
+	//POST Request 
+	Request->SetURL("http://localhost:8080/api/PlayerData/login");
+	Request->SetVerb("POST"); // Post Request
+	
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-   
-    /*
-    // Post Request Code {	
+
+    // Post Request Code 
 	FString JsonString;
 	FPlayerData PlayerData;
-	PlayerData.isvalid = true;
-	PlayerData.Xcoord = 10.0f;
-	PlayerData.Ycoord = 20.0f;
-	PlayerData.Zcoord = 30.0f;
+	PlayerData.email = "leronbergelson@gmail.com";
+    PlayerData.userpassword = "mypass";
 	
 	FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
 	Request->SetContentAsString(JsonString);
     UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
-    // }
-    
-    */
+
     
 	Request->ProcessRequest();
 }
@@ -82,8 +84,7 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
     }
     else
     {
-    // spawn new pawnn at dafual location
-
+    // spawn new pawn at default location
         UE_LOG(LogTemp, Warning, TEXT("FAILED"));
     }
     
@@ -111,4 +112,41 @@ FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseSt
     }
     
     return PlayerData;
+}
+
+void ADemoPlayerController::SaveData()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Saving"));
+    AREST_API_DemoCharacter* ControlledCharacter = GetPawn<AREST_API_DemoCharacter>();
+    
+    if(ControlledCharacter)
+    {
+        FVector Location = ControlledCharacter->GetActorLocation();
+        FPlayerData PlayerData;
+        PlayerData.email = "leronbergelson@gmail.com";
+        PlayerData.userpassword = "mypass";
+        PlayerData.isvalid = true;
+        PlayerData.pid = 1234;    
+        PlayerData.Health = ControlledCharacter->GetHealth();
+        PlayerData.Xcoord = Location.X;
+        PlayerData.Ycoord = Location.Y;
+        PlayerData.Zcoord = Location.Z;
+        
+        TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
+        
+        //Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
+        Request->SetURL("http://localhost:8080/api/PlayerData/updatePlayerData");
+        Request->SetVerb("PUT"); // PUT Request
+        Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+        FString JsonString;
+        FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
+        Request->SetContentAsString(JsonString);
+        UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+        
+        // Post Request through API passing in PID
+        Request->ProcessRequest();
+
+    }
+
 }
