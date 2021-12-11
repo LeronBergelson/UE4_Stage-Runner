@@ -33,6 +33,7 @@ protected:
     
     UPROPERTY(Replicated) //Needs to be replicated
     float Health;
+
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     UFUNCTION(Server, Reliable, WithValidation)
@@ -71,6 +72,6 @@ public:
 	void SetHealth(float NewHealth);
 	UFUNCTION(BlueprintCallable)
     float GetHealth() const {return Health;}
-	
+
 };
 

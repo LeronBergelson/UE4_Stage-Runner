@@ -4,14 +4,19 @@
 #include "DemoPlayerController.h"
 #include "REST_API_DEMO/REST_API_DemoCharacter.h"
 #include "REST_API_DEMO/REST_API_DemoGameMode.h"
+#include "API_Info_GameInstance.h"
 #include "JsonObjectConverter.h"
+#include <Runtime/Engine/Public/Net/UnrealNetwork.h>
+#include <Runtime/Engine/Classes/Kismet/GameplayStatics.h>
 
 ADemoPlayerController::ADemoPlayerController(){
 	Http = &FHttpModule::Get();
 }
 
+
 void ADemoPlayerController::BeginPlay(){
 
+    
     if(!HasAuthority())
     {
         UE_LOG(LogTemp, Warning, TEXT("RUNNING ON CLIENT"));
@@ -19,10 +24,10 @@ void ADemoPlayerController::BeginPlay(){
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("RUNNING ON SERVER"));
-        FTimerHandle TSaveHandle;
-        GetWorldTimerManager().SetTimer(TSaveHandle, this, &ADemoPlayerController::SaveData, 5.0f, true);
     }
+
 }
+
 
 void ADemoPlayerController::HandleServerEntry(){
     
@@ -30,34 +35,47 @@ void ADemoPlayerController::HandleServerEntry(){
         return;
     }
     
-    //FString PID = "1234";
+    UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
-    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
-	
-	Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
-	
-	// GET Request 
-	//Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
-	//Request->SetVerb("GET"); //Get Request
 
-	//POST Request 
-	Request->SetURL("http://localhost:8080/api/PlayerData/login");
-	Request->SetVerb("POST"); // Post Request
-	
-	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+    FString tempUserEmail = GameInstanceRef->getUserEmail();
+    FString tempUserPassword = GameInstanceRef->getUserPassword();
 
-    // Post Request Code 
-	FString JsonString;
-	FPlayerData PlayerData;
-	PlayerData.email = "leronbergelson@gmail.com";
-    PlayerData.userpassword = "mypass";
-	
-	FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
-	Request->SetContentAsString(JsonString);
-    UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+    if (tempUserEmail != "" && tempUserPassword != "") {
+        //FString PID = "1234";
 
-    
-	Request->ProcessRequest();
+        TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
+
+        Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
+
+        // GET Request 
+        //Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
+        //Request->SetVerb("GET"); //Get Request
+
+        //POST Request 
+        Request->SetURL("http://localhost:8080/api/PlayerData/login");
+        Request->SetVerb("POST"); // Post Request
+
+        Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+        // Post Request Code 
+        FString JsonString;
+        FPlayerData PlayerData;
+        PlayerData.email = tempUserEmail;
+        PlayerData.userpassword = tempUserPassword;
+
+        FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
+        Request->SetContentAsString(JsonString);
+        UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+
+
+        Request->ProcessRequest();
+
+        FTimerDelegate TimerDel;
+        FTimerHandle TSaveHandle;
+        TimerDel.BindUFunction(this, FName("SaveData"), tempUserEmail, tempUserPassword);
+        GetWorldTimerManager().SetTimer(TSaveHandle, TimerDel, 5.0f, true);
+    }
 }
 
 void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success)
@@ -114,7 +132,7 @@ FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseSt
     return PlayerData;
 }
 
-void ADemoPlayerController::SaveData()
+void ADemoPlayerController::SaveData(FString UserEmail, FString Password)
 {
     UE_LOG(LogTemp, Warning, TEXT("Saving"));
     AREST_API_DemoCharacter* ControlledCharacter = GetPawn<AREST_API_DemoCharacter>();
@@ -123,10 +141,10 @@ void ADemoPlayerController::SaveData()
     {
         FVector Location = ControlledCharacter->GetActorLocation();
         FPlayerData PlayerData;
-        PlayerData.email = "leronbergelson@gmail.com";
-        PlayerData.userpassword = "mypass";
+        PlayerData.email = UserEmail;
+        PlayerData.userpassword = Password;
         PlayerData.isvalid = true;
-        PlayerData.pid = 1234;    
+        PlayerData.pid = 1212;    
         PlayerData.Health = ControlledCharacter->GetHealth();
         PlayerData.Xcoord = Location.X;
         PlayerData.Ycoord = Location.Y;
@@ -148,5 +166,58 @@ void ADemoPlayerController::SaveData()
         Request->ProcessRequest();
 
     }
+}
 
+void ADemoPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(ADemoPlayerController, userEmail);
+}
+
+
+bool ADemoPlayerController::Server_SetUserEmail_Validate(const FString& NewUserEmail)
+{
+    return true;
+}
+
+void ADemoPlayerController::Server_SetUserEmail_Implementation(const FString& NewUserEmail)
+{
+    SetUserEmail(NewUserEmail);
+}
+
+void ADemoPlayerController::SetUserEmail(FString NewUserEmail){
+
+    if(HasAuthority()){ // Check if server
+        userEmail = NewUserEmail; // set userEmail
+        UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+        GameInstanceRef->SetUserEmail(NewUserEmail);
+        //UE_LOG(LogTemp, Warning, TEXT("userEmail: %s"), *userEmail);
+
+    }
+    else{ // if we are the client
+        Server_SetUserEmail(NewUserEmail); // call Server_SetUserEmail()
+    }
+}
+
+bool ADemoPlayerController::Server_SetUserPassword_Validate(const FString& NewUserPassword)
+{
+    return true;
+}
+
+void ADemoPlayerController::Server_SetUserPassword_Implementation(const FString& NewUserPassword)
+{
+    SetUserPassword(NewUserPassword);
+}
+
+void ADemoPlayerController::SetUserPassword(FString NewUserPassword){
+
+    if(HasAuthority()){ // Check if server
+        userPassword = NewUserPassword; // set UserPassword
+        //UE_LOG(LogTemp, Warning, TEXT("userPassword: %s"), *userPassword);
+        UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+        GameInstanceRef->SetUserPassword(userPassword);
+    }
+    else{ // if we are the client
+        Server_SetUserPassword(NewUserPassword); // call Server_SetUserPassword()
+    }
 }

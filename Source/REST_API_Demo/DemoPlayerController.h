@@ -34,15 +34,40 @@ UCLASS()
 class REST_API_DEMO_API ADemoPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
-public:
-    ADemoPlayerController();
-    virtual void BeginPlay() override;
-    void HandleServerEntry();
     
 protected:
 	FHttpModule* Http;
+	FString userEmail;
+    FString userPassword;
+        
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
-	void SaveData();
+	
+	UFUNCTION()
+	void SaveData(FString UserEmail, FString Password);
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+    void Server_SetUserEmail(const FString& NewUserEmail);
+        
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_SetUserPassword(const FString& NewUserPassword); 
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    
+public:
+    ADemoPlayerController();
+    virtual void BeginPlay() override;
+    
+    void HandleServerEntry();    
+	
+	UFUNCTION(BlueprintCallable)
+    void SetUserEmail(FString NewUserEmail);
+	UFUNCTION(BlueprintCallable)
+    FString GetUserEmail() const {return userEmail;}
+        
+    UFUNCTION(BlueprintCallable)
+    void SetUserPassword(FString NewUserPassword);
+	UFUNCTION(BlueprintCallable)
+    FString GetUserPassword() const {return userPassword;}
 };
