@@ -11,13 +11,13 @@ UAPI_Info_GameInstance::UAPI_Info_GameInstance() {
 void UAPI_Info_GameInstance::SetUserEmail(FString NewUserEmail) {
 
     userEmail = NewUserEmail; // set User Email
-    UE_LOG(LogTemp, Warning, TEXT("userEmail: %s"), *userEmail);
+    //UE_LOG(LogTemp, Warning, TEXT("userEmail: %s"), *userEmail);
 
 }
 
 void UAPI_Info_GameInstance::SetUserPassword(FString NewUserPassword) {
 
     userPasswordVal = NewUserPassword; // set UserPassword
-    UE_LOG(LogTemp, Warning, TEXT("userPasswordVal: %s"), *userPasswordVal);
+    //UE_LOG(LogTemp, Warning, TEXT("userPasswordVal: %s"), *userPasswordVal);
 
 }

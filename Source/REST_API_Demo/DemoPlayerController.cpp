@@ -29,93 +29,107 @@ void ADemoPlayerController::BeginPlay(){
 }
 
 
-void ADemoPlayerController::HandleServerEntry(){
-    
-    if(!HasAuthority()){
+void ADemoPlayerController::HandleServerEntry() {
+
+    if (!HasAuthority()) {
         return;
     }
-    
+
     UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
 
     FString tempUserEmail = GameInstanceRef->getUserEmail();
     FString tempUserPassword = GameInstanceRef->getUserPassword();
 
-    if (tempUserEmail != "" && tempUserPassword != "") {
-        //FString PID = "1234";
-
-        TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
-
-        Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
-
-        // GET Request 
-        //Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
-        //Request->SetVerb("GET"); //Get Request
-
-        //POST Request 
-        Request->SetURL("http://localhost:8080/api/PlayerData/login");
-        Request->SetVerb("POST"); // Post Request
-
-        Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-
-        // Post Request Code 
-        FString JsonString;
-        FPlayerData PlayerData;
-        PlayerData.email = tempUserEmail;
-        PlayerData.userpassword = tempUserPassword;
-
-        FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
-        Request->SetContentAsString(JsonString);
-        UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+    UE_LOG(LogTemp, Warning, TEXT("User Email: %s"), *tempUserEmail);
+    UE_LOG(LogTemp, Warning, TEXT("User Password: %s"), *tempUserPassword);
 
 
-        Request->ProcessRequest();
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 
-        FTimerDelegate TimerDel;
-        FTimerHandle TSaveHandle;
-        TimerDel.BindUFunction(this, FName("SaveData"), tempUserEmail, tempUserPassword);
-        GetWorldTimerManager().SetTimer(TSaveHandle, TimerDel, 5.0f, true);
-    }
+    Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
+
+    // GET Request
+    //Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
+    //Request->SetVerb("GET"); //Get Request
+
+    //POST Request 
+    Request->SetURL("http://localhost:8080/api/PlayerData/login");
+    Request->SetVerb("POST"); // Post Request
+
+    Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+    // Post Request Code 
+    FString JsonString;
+    FPlayerData PlayerData;
+    PlayerData.email = tempUserEmail;
+    PlayerData.userpassword = tempUserPassword;
+
+    FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
+    Request->SetContentAsString(JsonString);
+    UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+
+
+    Request->ProcessRequest();
+   
 }
 
 void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success)
 {
-    //Sets Middle map location
-    FVector Location = FVector::ZeroVector;
-    Location.Z = 400.0f;
+
+    FVector Location;
     FPlayerData PlayerData;
-   
-    if(Success)
+
+    FTimerDelegate TimerDel;
+    FTimerHandle TSaveHandle;
+
+    UWorld* MyWorld = GetWorld();
+    FString CurrentMapName = MyWorld->GetMapName();
+    CurrentMapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix); // Removes UEDPIE_0_ prefix on retrieved map name
+
+
+    if (Success)
     {
-        UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
-        // setup pawn
-        
+        //UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
+
+
         PlayerData = ConvertToPlayerData(Response->GetContentAsString()); // Converts Contents in Json string to PlayerData Struct
-        
+
         // if is valid, sets player location based on retrieved values  
-        if(PlayerData.isvalid){
-           UE_LOG(LogTemp, Warning, TEXT("SUCCESS %f"), PlayerData.Zcoord);
-           Location.X = PlayerData.Xcoord;
-           Location.Y = PlayerData.Ycoord;
-           Location.Z = PlayerData.Zcoord;
+        if (PlayerData.isvalid) {
+
+            playerConnectEstablished = true;
+
+            if (CurrentMapName != "LoginMap") // makes sure pawn does not get spawned in the LoginMap level
+            {
+                // setup pawn
+
+                Location.X = PlayerData.Xcoord;
+                Location.Y = PlayerData.Ycoord;
+                Location.Z = PlayerData.Zcoord;
+
+                if (AREST_API_DemoGameMode* GM = GetWorld()->GetAuthGameMode<AREST_API_DemoGameMode>())
+                {
+                    FActorSpawnParameters SpawnParams;
+                    SpawnParams.Owner = this;
+                    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+                    if (AREST_API_DemoCharacter* NewPawn = GetWorld()->SpawnActor<AREST_API_DemoCharacter>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
+                    {
+                        NewPawn->SetHealth(PlayerData.Health);
+                        Possess(NewPawn);
+                    }
+                    
+                    TimerDel.BindUFunction(this, FName("SaveData"), PlayerData.email, PlayerData.userpassword);
+                    GetWorldTimerManager().SetTimer(TSaveHandle, TimerDel, 5.0f, true);
+                }
+            }
+
         }
-    }
-    else
-    {
-    // spawn new pawn at default location
-        UE_LOG(LogTemp, Warning, TEXT("FAILED"));
-    }
-    
-    if(AREST_API_DemoGameMode* GM = GetWorld()->GetAuthGameMode<AREST_API_DemoGameMode>())
-    {
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.Owner = this;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-                
-        if(AREST_API_DemoCharacter* NewPawn = GetWorld()->SpawnActor<AREST_API_DemoCharacter>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
+        else
         {
-            NewPawn->SetHealth(PlayerData.Health);
-            Possess(NewPawn);
+            UE_LOG(LogTemp, Warning, TEXT("FAILED"));
+            playerConnectEstablished = false;
         }
     }
 }
@@ -127,6 +141,7 @@ FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseSt
     if(!ResponseString.Contains("timestamp"))
     {
         FJsonObjectConverter::JsonObjectStringToUStruct(*ResponseString, &PlayerData, 0, 0);
+
     }
     
     return PlayerData;
@@ -144,7 +159,7 @@ void ADemoPlayerController::SaveData(FString UserEmail, FString Password)
         PlayerData.email = UserEmail;
         PlayerData.userpassword = Password;
         PlayerData.isvalid = true;
-        PlayerData.pid = 1212;    
+        PlayerData.pid = 2626;    
         PlayerData.Health = ControlledCharacter->GetHealth();
         PlayerData.Xcoord = Location.X;
         PlayerData.Ycoord = Location.Y;

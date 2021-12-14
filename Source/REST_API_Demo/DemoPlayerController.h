@@ -39,7 +39,8 @@ protected:
 	FHttpModule* Http;
 	FString userEmail;
     FString userPassword;
-        
+	bool playerConnectEstablished;
+
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
 	
@@ -59,8 +60,11 @@ public:
     ADemoPlayerController();
     virtual void BeginPlay() override;
     
+	UFUNCTION(BlueprintCallable)
     void HandleServerEntry();    
 	
+	UFUNCTION(BlueprintCallable)
+	bool GetPlayerConnectEstablished() {return playerConnectEstablished;}
 	UFUNCTION(BlueprintCallable)
     void SetUserEmail(FString NewUserEmail);
 	UFUNCTION(BlueprintCallable)
