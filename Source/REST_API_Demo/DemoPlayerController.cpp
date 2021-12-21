@@ -16,7 +16,6 @@ ADemoPlayerController::ADemoPlayerController(){
 
 void ADemoPlayerController::BeginPlay(){
 
-    
     if(!HasAuthority())
     {
         UE_LOG(LogTemp, Warning, TEXT("RUNNING ON CLIENT"));
@@ -25,7 +24,6 @@ void ADemoPlayerController::BeginPlay(){
     {
         UE_LOG(LogTemp, Warning, TEXT("RUNNING ON SERVER"));
     }
-
 }
 
 
@@ -37,13 +35,8 @@ void ADemoPlayerController::HandleServerEntry() {
 
     UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
-
     FString tempUserEmail = GameInstanceRef->getUserEmail();
     FString tempUserPassword = GameInstanceRef->getUserPassword();
-
-    UE_LOG(LogTemp, Warning, TEXT("User Email: %s"), *tempUserEmail);
-    UE_LOG(LogTemp, Warning, TEXT("User Password: %s"), *tempUserPassword);
-
 
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 
@@ -69,9 +62,7 @@ void ADemoPlayerController::HandleServerEntry() {
     Request->SetContentAsString(JsonString);
     UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
 
-
     Request->ProcessRequest();
-   
 }
 
 void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success)
@@ -80,30 +71,24 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
     FVector Location;
     FPlayerData PlayerData;
 
-    FTimerDelegate TimerDel;
-    FTimerHandle TSaveHandle;
-
     UWorld* MyWorld = GetWorld();
-    FString CurrentMapName = MyWorld->GetMapName();
+    FString CurrentMapName = MyWorld->GetMapName(); // Retrieves map name
     CurrentMapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix); // Removes UEDPIE_0_ prefix on retrieved map name
-
 
     if (Success)
     {
         //UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
 
-
         PlayerData = ConvertToPlayerData(Response->GetContentAsString()); // Converts Contents in Json string to PlayerData Struct
 
-        // if is valid, sets player location based on retrieved values  
+        // If is valid, sets player location based on retrieved values  
         if (PlayerData.isvalid) {
 
             playerConnectEstablished = true;
 
-            if (CurrentMapName != "LoginMap") // makes sure pawn does not get spawned in the LoginMap level
+            if (CurrentMapName != "LoginMap") // Makes sure pawn does not get spawned in the LoginMap level
             {
-                // setup pawn
-
+                // Setup pawn
                 Location.X = PlayerData.Xcoord;
                 Location.Y = PlayerData.Ycoord;
                 Location.Z = PlayerData.Zcoord;
@@ -114,17 +99,16 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
                     SpawnParams.Owner = this;
                     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+                    // Spawn and possess pawn
                     if (AREST_API_DemoCharacter* NewPawn = GetWorld()->SpawnActor<AREST_API_DemoCharacter>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
                     {
                         NewPawn->SetHealth(PlayerData.Health);
                         Possess(NewPawn);
                     }
-                    
-                    TimerDel.BindUFunction(this, FName("SaveData"), PlayerData.email, PlayerData.userpassword);
-                    GetWorldTimerManager().SetTimer(TSaveHandle, TimerDel, 5.0f, true);
+
+                    SaveDataRepeater(true);
                 }
             }
-
         }
         else
         {
@@ -141,13 +125,12 @@ FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseSt
     if(!ResponseString.Contains("timestamp"))
     {
         FJsonObjectConverter::JsonObjectStringToUStruct(*ResponseString, &PlayerData, 0, 0);
-
     }
     
     return PlayerData;
 }
 
-void ADemoPlayerController::SaveData(FString UserEmail, FString Password)
+void ADemoPlayerController::SaveData(FString PlayerEmail, FString Password)
 {
     UE_LOG(LogTemp, Warning, TEXT("Saving"));
     AREST_API_DemoCharacter* ControlledCharacter = GetPawn<AREST_API_DemoCharacter>();
@@ -156,7 +139,7 @@ void ADemoPlayerController::SaveData(FString UserEmail, FString Password)
     {
         FVector Location = ControlledCharacter->GetActorLocation();
         FPlayerData PlayerData;
-        PlayerData.email = UserEmail;
+        PlayerData.email = PlayerEmail;
         PlayerData.userpassword = Password;
         PlayerData.isvalid = true;
         PlayerData.pid = 2626;    
@@ -179,7 +162,6 @@ void ADemoPlayerController::SaveData(FString UserEmail, FString Password)
         
         // Post Request through API passing in PID
         Request->ProcessRequest();
-
     }
 }
 
@@ -207,7 +189,6 @@ void ADemoPlayerController::SetUserEmail(FString NewUserEmail){
         UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
         GameInstanceRef->SetUserEmail(NewUserEmail);
         //UE_LOG(LogTemp, Warning, TEXT("userEmail: %s"), *userEmail);
-
     }
     else{ // if we are the client
         Server_SetUserEmail(NewUserEmail); // call Server_SetUserEmail()
@@ -236,3 +217,27 @@ void ADemoPlayerController::SetUserPassword(FString NewUserPassword){
         Server_SetUserPassword(NewUserPassword); // call Server_SetUserPassword()
     }
 }
+
+bool ADemoPlayerController::SaveDataRepeater(bool activeState)
+{
+
+    UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
+
+    FString UserEmail = GameInstanceRef->getUserEmail();
+    FString UserPassword = GameInstanceRef->getUserPassword();
+
+    // Calls SaveData every 5 seconds
+    if (activeState) {
+        TimerDel.BindUFunction(this, FName("SaveData"), UserEmail, UserPassword);
+        GetWorldTimerManager().SetTimer(TSaveHandle, TimerDel, 5.0f, true);
+    }
+    else {
+        GetWorldTimerManager().PauseTimer(TSaveHandle);
+        //GetWorldTimerManager().ClearTimer(TSaveHandle);
+    }
+
+    return activeState;
+}
+
+

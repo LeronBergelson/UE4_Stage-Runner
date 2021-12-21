@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/EngineTypes.h"
 #include "Http.h"
 #include "DemoPlayerController.generated.h"
 
@@ -30,6 +31,20 @@ struct FPlayerData
 	float Zcoord = 0.0f;
 };
 
+USTRUCT(BlueprintType)
+struct FStageData
+{
+	GENERATED_BODY()
+	UPROPERTY()
+	FString email = "";
+	UPROPERTY()
+	int bluestagecompletiontime = 0;
+	UPROPERTY()
+	int yellowstagecompletiontime = 0;
+	UPROPERTY()
+	int redstagecompletiontime = 0;
+};
+
 UCLASS()
 class REST_API_DEMO_API ADemoPlayerController : public APlayerController
 {
@@ -37,15 +52,29 @@ class REST_API_DEMO_API ADemoPlayerController : public APlayerController
     
 protected:
 	FHttpModule* Http;
+	
+	UPROPERTY(Replicated)
 	FString userEmail;
+
+	UPROPERTY(Replicated)
     FString userPassword;
+
+	UPROPERTY(Replicated)
 	bool playerConnectEstablished;
 
+	UPROPERTY(Replicated)
+	bool canSaveData = true;
+	
+	UPROPERTY(Replicated)
+	FTimerHandle TSaveHandle;
+	
+	FTimerDelegate TimerDel;
+	
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
 	
 	UFUNCTION()
-	void SaveData(FString UserEmail, FString Password);
+	void SaveData(FString PlayerEmail, FString Password);
 	
 	UFUNCTION(Server, Reliable, WithValidation)
     void Server_SetUserEmail(const FString& NewUserEmail);
@@ -65,13 +94,19 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	bool GetPlayerConnectEstablished() {return playerConnectEstablished;}
+	
 	UFUNCTION(BlueprintCallable)
     void SetUserEmail(FString NewUserEmail);
+	
 	UFUNCTION(BlueprintCallable)
-    FString GetUserEmail() const {return userEmail;}
+	FString GetUserEmail() const { return userEmail;}
         
     UFUNCTION(BlueprintCallable)
     void SetUserPassword(FString NewUserPassword);
+	
 	UFUNCTION(BlueprintCallable)
-    FString GetUserPassword() const {return userPassword;}
+	FString GetUserPassword() const { return userPassword;}
+	
+	UFUNCTION(BlueprintCallable)
+	bool SaveDataRepeater(bool activeState);
 };
