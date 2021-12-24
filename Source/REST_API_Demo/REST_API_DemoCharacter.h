@@ -31,8 +31,17 @@ public:
 
 protected:
     
-    UPROPERTY(Replicated) //Needs to be replicated
+	//Needs to be replicated
+    UPROPERTY(Replicated) 
     float Health;
+	UPROPERTY(Replicated) 
+	int blueStageAttempts;
+	UPROPERTY(Replicated)
+	int yellowStageAttempts;
+	UPROPERTY(Replicated)
+	int redStageAttempts;
+	UPROPERTY(Replicated)
+	bool didReachEnd;
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
@@ -68,10 +77,35 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	
+	// Setter and Getter for player Health
 	UFUNCTION(BlueprintCallable)
 	void SetHealth(float NewHealth);
 	UFUNCTION(BlueprintCallable)
     float GetHealth() const {return Health;}
+
+	// Setter and Getter for player blue stage attempts
+	UFUNCTION(BlueprintCallable)
+	void SetBlueStageAttempts(int blueAttempts);
+	UFUNCTION(BlueprintCallable)
+	int GetBlueStageAttempts() const {return blueStageAttempts;}
+
+	// Setter and Getter for player yellow stage attempts
+	UFUNCTION(BlueprintCallable)
+	void SetYellowStageAttempts(int yellowAttempts);
+	UFUNCTION(BlueprintCallable)
+	int GetYellowStageAttempts() const {return yellowStageAttempts;}
+
+	// Setter and Getter for player red stage attempts
+	UFUNCTION(BlueprintCallable)
+	void SetRedStageAttempts(int redAttempts);
+	UFUNCTION(BlueprintCallable)
+	int GetRedStageAttempts() const {return redStageAttempts;}
+
+	// Setter and Getter for player red stage attempts
+	UFUNCTION(BlueprintCallable)
+	void SetDidReachEnd(bool didFinishCourse);
+	UFUNCTION(BlueprintCallable)
+	bool GetDidReachEnd() const {return didReachEnd;}
 
 };
 

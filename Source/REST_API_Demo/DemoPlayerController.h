@@ -29,10 +29,16 @@ struct FPlayerData
 	float Ycoord = 0.0f;
 	UPROPERTY()
 	float Zcoord = 0.0f;
+	UPROPERTY()
+	int bluestageattempts = 0;
+	UPROPERTY()
+	int yellowstageattempts = 0;
+	UPROPERTY()
+	int redstageattempts = 0;
 };
 
 USTRUCT(BlueprintType)
-struct FStageData
+struct FCourseData
 {
 	GENERATED_BODY()
 	UPROPERTY()
@@ -63,7 +69,7 @@ protected:
 	bool playerConnectEstablished;
 
 	UPROPERTY(Replicated)
-	bool canSaveData = true;
+	bool canSaveData;
 	
 	UPROPERTY(Replicated)
 	FTimerHandle TSaveHandle;
@@ -73,8 +79,8 @@ protected:
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
 	
-	UFUNCTION()
-	void SaveData(FString PlayerEmail, FString Password);
+	UFUNCTION(BlueprintCallable)
+	void SaveData();
 	
 	UFUNCTION(Server, Reliable, WithValidation)
     void Server_SetUserEmail(const FString& NewUserEmail);
@@ -90,22 +96,28 @@ public:
     virtual void BeginPlay() override;
     
 	UFUNCTION(BlueprintCallable)
-    void HandleServerEntry();    
+    void HandleServerEntry();  
+
+	UFUNCTION(BlueprintCallable)
+	void SaveCourseData(int blueStageCompletionTime, int yellowStageCompletionTime, int redStageCompletionTime);
 	
 	UFUNCTION(BlueprintCallable)
 	bool GetPlayerConnectEstablished() {return playerConnectEstablished;}
 	
 	UFUNCTION(BlueprintCallable)
+	bool SetCanSaveData(bool CanSave) {return canSaveData = CanSave;}
+
+	UFUNCTION(BlueprintCallable)
     void SetUserEmail(FString NewUserEmail);
 	
 	UFUNCTION(BlueprintCallable)
-	FString GetUserEmail() const { return userEmail;}
+	FString GetUserEmail() const {return userEmail;}
         
     UFUNCTION(BlueprintCallable)
     void SetUserPassword(FString NewUserPassword);
 	
 	UFUNCTION(BlueprintCallable)
-	FString GetUserPassword() const { return userPassword;}
+	FString GetUserPassword() const {return userPassword;}
 	
 	UFUNCTION(BlueprintCallable)
 	bool SaveDataRepeater(bool activeState);

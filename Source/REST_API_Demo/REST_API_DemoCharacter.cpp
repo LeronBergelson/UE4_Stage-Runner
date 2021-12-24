@@ -47,6 +47,7 @@ AREST_API_DemoCharacter::AREST_API_DemoCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	
 	Health = 100.0f;
+	didReachEnd = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -97,6 +98,33 @@ void AREST_API_DemoCharacter::SetHealth(float NewHealth){
     }
 }
 
+
+void AREST_API_DemoCharacter::SetBlueStageAttempts(int blueAttempts)
+{
+	if (HasAuthority()) { // Check if sever
+		blueStageAttempts = blueAttempts; // set health
+	}
+}
+
+void AREST_API_DemoCharacter::SetYellowStageAttempts(int yellowAttempts)
+{
+	if (HasAuthority()) { // Check if sever
+		yellowStageAttempts = yellowAttempts; // set health
+	}
+}
+
+void AREST_API_DemoCharacter::SetRedStageAttempts(int redAttempts)
+{
+	if (HasAuthority()) { // Check if sever
+		redStageAttempts = redAttempts; // set health
+	}
+}
+
+void AREST_API_DemoCharacter::SetDidReachEnd(bool didFinishCourse)
+{
+	didReachEnd = didFinishCourse;
+}
+
 void AREST_API_DemoCharacter::TurnAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
@@ -108,6 +136,8 @@ void AREST_API_DemoCharacter::LookUpAtRate(float Rate)
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
+
+
 
 void AREST_API_DemoCharacter::MoveForward(float Value)
 {

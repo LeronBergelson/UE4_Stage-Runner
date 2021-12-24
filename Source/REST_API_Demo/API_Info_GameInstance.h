@@ -19,15 +19,21 @@ protected:
         FString userEmail;
     UPROPERTY()
         FString userPasswordVal;
-    	
+
 public:
 
     UAPI_Info_GameInstance();
     
+    //Getter
     FString getUserEmail() { return userEmail;}
+    //Setter
     void SetUserEmail(FString NewUserEmail);
 
-    FString getUserPassword() { return userPasswordVal; }
-    void SetUserPassword(FString NewUserPassword);
+    //Getter
+    UFUNCTION(BlueprintCallable)
+        FString getUserPassword() { return userPasswordVal; }
+    //Setter
+    UFUNCTION(BlueprintCallable)
+        void SetUserPassword(FString NewUserPassword);
 
 };
