@@ -34,12 +34,16 @@ protected:
 	//Needs to be replicated
     UPROPERTY(Replicated) 
     float Health;
+
+	/*
 	UPROPERTY(Replicated) 
 	int blueStageAttempts;
 	UPROPERTY(Replicated)
 	int yellowStageAttempts;
 	UPROPERTY(Replicated)
 	int redStageAttempts;
+	*/
+
 	UPROPERTY(Replicated)
 	bool didReachEnd;
 
@@ -83,6 +87,7 @@ public:
 	UFUNCTION(BlueprintCallable)
     float GetHealth() const {return Health;}
 
+	/*
 	// Setter and Getter for player blue stage attempts
 	UFUNCTION(BlueprintCallable)
 	void SetBlueStageAttempts(int blueAttempts);
@@ -101,7 +106,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	int GetRedStageAttempts() const {return redStageAttempts;}
 
-	// Setter and Getter for player red stage attempts
+	*/
+
+	// Setter and Getter
 	UFUNCTION(BlueprintCallable)
 	void SetDidReachEnd(bool didFinishCourse);
 	UFUNCTION(BlueprintCallable)

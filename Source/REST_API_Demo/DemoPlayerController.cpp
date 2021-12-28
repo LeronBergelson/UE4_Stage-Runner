@@ -108,6 +108,8 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
     FString CurrentMapName = MyWorld->GetMapName(); // Retrieves map name
     CurrentMapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix); // Removes UEDPIE_0_ prefix on retrieved map name
 
+    UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
     if (Success)
     {
         //UE_LOG(LogTemp, Warning, TEXT("SUCCESS %s"), *Response->GetContentAsString());
@@ -138,10 +140,10 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
 
                         NewPawn->SetHealth(PlayerData.Health); // Sets character health
                         
-                        // Sets player stage attempts which are retrieved from the database  
-                        NewPawn->SetBlueStageAttempts(PlayerData.bluestageattempts); 
-                        NewPawn->SetYellowStageAttempts(PlayerData.yellowstageattempts); 
-                        NewPawn->SetRedStageAttempts(PlayerData.redstageattempts); 
+                        // Saves retrieved current pawn/player stage attempts to the game instance
+                        GameInstanceRef->SetBlueStageAttempts(PlayerData.bluestageattempts);         //NewPawn->SetBlueStageAttempts(PlayerData.bluestageattempts); 
+                        GameInstanceRef->SetYellowStageAttempts(PlayerData.yellowstageattempts);     //NewPawn->SetYellowStageAttempts(PlayerData.yellowstageattempts); 
+                        GameInstanceRef->SetRedStageAttempts(PlayerData.redstageattempts);           //NewPawn->SetRedStageAttempts(PlayerData.redstageattempts); 
                         
                         Possess(NewPawn);
                     }
@@ -179,15 +181,15 @@ void ADemoPlayerController::SaveData()
 
         // Cast to Game Instance
         UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
-        FString UserEmail = GameInstanceRef->getUserEmail(); // Retrieve user email 
-        FString UserPassword = GameInstanceRef->getUserPassword(); // Retrieve user password 
+        //FString UserEmail = GameInstanceRef->getUserEmail(); // Retrieve user email 
+        //FString UserPassword = GameInstanceRef->getUserPassword(); // Retrieve user password 
 
         if (ControlledCharacter)
         {
             FVector Location = ControlledCharacter->GetActorLocation();
             FPlayerData PlayerData;
-            PlayerData.email = UserEmail;
-            PlayerData.userpassword = UserPassword;
+            PlayerData.email = GameInstanceRef->getUserEmail(); // Retrieve user email 
+            PlayerData.userpassword = GameInstanceRef->getUserPassword(); // Retrieve user password 
             PlayerData.isvalid = true;
             PlayerData.pid = 2626;
             PlayerData.Health = ControlledCharacter->GetHealth();
@@ -202,9 +204,9 @@ void ADemoPlayerController::SaveData()
                 PlayerData.Ycoord = 2567.03f;
                 PlayerData.Zcoord = 424.192f;
             }
-            PlayerData.bluestageattempts = ControlledCharacter->GetBlueStageAttempts();
-            PlayerData.yellowstageattempts = ControlledCharacter->GetYellowStageAttempts();
-            PlayerData.redstageattempts = ControlledCharacter->GetRedStageAttempts();
+            PlayerData.bluestageattempts = GameInstanceRef->GetBlueStageAttempts(); // ControlledCharacter->GetBlueStageAttempts();
+            PlayerData.yellowstageattempts = GameInstanceRef->GetYellowStageAttempts(); // ControlledCharacter->GetYellowStageAttempts();
+            PlayerData.redstageattempts = GameInstanceRef->GetRedStageAttempts(); // ControlledCharacter->GetRedStageAttempts();
 
             TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 

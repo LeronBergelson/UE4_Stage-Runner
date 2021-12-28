@@ -21,3 +21,23 @@ void UAPI_Info_GameInstance::SetUserPassword(FString NewUserPassword) {
     //UE_LOG(LogTemp, Warning, TEXT("userPasswordVal: %s"), *userPasswordVal);
 
 }
+
+void UAPI_Info_GameInstance::SetPlayerHealth(int newHealth)
+{
+    playerHealth = newHealth;
+}
+
+void UAPI_Info_GameInstance::SetBlueStageAttempts(int attemptNum)
+{
+    blueStageAttempts = attemptNum;
+}
+
+void UAPI_Info_GameInstance::SetYellowStageAttempts(int attemptNum)
+{
+    yellowStageAttempts = attemptNum;
+}
+
+void UAPI_Info_GameInstance::SetRedStageAttempts(int attemptNum)
+{
+    redStageAttempts = attemptNum;
+}

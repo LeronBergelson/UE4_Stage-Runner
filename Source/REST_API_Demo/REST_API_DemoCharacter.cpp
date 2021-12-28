@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "REST_API_DemoCharacter.h"
+#include "API_Info_GameInstance.h"
+#include <Runtime/Engine/Classes/Kismet/GameplayStatics.h>
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -46,7 +48,9 @@ AREST_API_DemoCharacter::AREST_API_DemoCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	
-	Health = 100.0f;
+	//UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
+	Health = 100; // GameInstanceRef->GetPlayerHealth();
 	didReachEnd = false;
 }
 
@@ -89,36 +93,53 @@ void AREST_API_DemoCharacter::Server_SetHealth_Implementation(float NewHealth)
 }
 
 void AREST_API_DemoCharacter::SetHealth(float NewHealth){
+	UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
 
     if(HasAuthority()){ // Check if sever
         Health = NewHealth; // set health
+		// Saves player health to the Game Instance so that if the player gets respawned saved health values can be retrieved.
+		GameInstanceRef->SetPlayerHealth(Health);
     }
     else{ // if we are the client
         Server_SetHealth(NewHealth); // call Server_SetHealth()
     }
 }
 
-
+/*
 void AREST_API_DemoCharacter::SetBlueStageAttempts(int blueAttempts)
 {
+	UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
 	if (HasAuthority()) { // Check if sever
 		blueStageAttempts = blueAttempts; // set health
+	    // Saves blue stage attempts to the Game Instance so that if the player gets respawned the attempt value can be retrieved.
+		GameInstanceRef->SetBlueStageAttempts(blueStageAttempts);
 	}
 }
 
 void AREST_API_DemoCharacter::SetYellowStageAttempts(int yellowAttempts)
 {
+	UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
 	if (HasAuthority()) { // Check if sever
 		yellowStageAttempts = yellowAttempts; // set health
+		// Saves yellow stage attempts to the Game Instance so that if the player gets respawned the attempt value can be retrieved.
+		GameInstanceRef->SetYellowStageAttempts(yellowAttempts);
 	}
 }
 
 void AREST_API_DemoCharacter::SetRedStageAttempts(int redAttempts)
 {
+	UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld())); // Gets the API_Info_GameInstance
+
 	if (HasAuthority()) { // Check if sever
 		redStageAttempts = redAttempts; // set health
+		// Saves red stage attempts to the Game Instance so that if the player gets respawned the attempt value can be retrieved.
+		GameInstanceRef->SetRedStageAttempts(redStageAttempts);
 	}
 }
+
+*/
 
 void AREST_API_DemoCharacter::SetDidReachEnd(bool didFinishCourse)
 {
