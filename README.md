@@ -10,7 +10,7 @@ The purpose of this project is to demonstrate the ability to visualize continuou
 https://www.youtube.com/watch?v=aPLFcpMnHXk&ab_channel=LRCreativeStudio
 
 ## Spring Boot REST Web Service project repository
-https://github.com/LeronBergelson/WebService_Stage-Runner
+https://github.com/LeronBergelson/Web-Service_Stage-Runner
 
 ## Jupyter Notebook project repository
 https://github.com/LeronBergelson/DataVisualization_Stage-Runner
