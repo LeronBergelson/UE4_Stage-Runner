@@ -39,31 +39,21 @@ void ADemoPlayerController::HandleServerEntry() {
     FString tempUserEmail = GameInstanceRef->getUserEmail();
     FString tempUserPassword = GameInstanceRef->getUserPassword();
 
-    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
+    UWorld* MyWorld = GetWorld();
+    FString CurrentMapName = MyWorld->GetMapName(); // Retrieves map name
+    CurrentMapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix); // Removes UEDPIE_0_ prefix on retrieved map name
 
-    Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
+    if (tempUserEmail != "" && tempUserPassword != "") {
 
-    // GET Request
-    //Request->SetURL("http://localhost:8080/api/PlayerData/" + PID);
-    //Request->SetVerb("GET"); //Get Request
+        if (CurrentMapName == "LoginMap") // Makes sure pawn does not get spawned in the LoginMap level
+        {
+            UserSignIn(tempUserEmail, tempUserPassword);
+        }
+        else {
+            CreatePlayer();
+        }
+    }
 
-    //POST Request 
-    Request->SetURL("http://localhost:8080/api/PlayerData/login");
-    Request->SetVerb("POST"); // Post Request
-
-    Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-
-    // Post Request Code 
-    FString JsonString;
-    FPlayerData PlayerData;
-    PlayerData.email = tempUserEmail;
-    PlayerData.userpassword = tempUserPassword;
-
-    FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);
-    Request->SetContentAsString(JsonString);
-    UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
-
-    Request->ProcessRequest();
 }
 
 void ADemoPlayerController::SaveCourseData(int blueStageCompletionTime, int yellowStageCompletionTime, int redStageCompletionTime)
@@ -101,6 +91,10 @@ void ADemoPlayerController::SaveCourseData(int blueStageCompletionTime, int yell
 void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success)
 {
 
+    if (Success) {
+        UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *Response->GetContentAsString());
+    }
+
     FVector Location;
     FPlayerData PlayerData;
 
@@ -119,14 +113,14 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
         // If is valid, proceed to get player location, health, stage attempts which are passed in from the database  
         if (PlayerData.isvalid) {
 
-            playerConnectEstablished = true; // If (PlayerData.isvalid) is true playerConnectEstablished is set to true
+            //playerConnectEstablished = true; // If (PlayerData.isvalid) is true playerConnectEstablished is set to true
 
             if (CurrentMapName != "LoginMap") // Makes sure pawn does not get spawned in the LoginMap level
             {
                 // Setup pawn location
-                Location.X = PlayerData.Xcoord;
-                Location.Y = PlayerData.Ycoord;
-                Location.Z = PlayerData.Zcoord;
+                Location.X = PlayerData.xcoord;
+                Location.Y = PlayerData.ycoord;
+                Location.Z = PlayerData.zcoord;
 
                 if (AREST_API_DemoGameMode* GM = GetWorld()->GetAuthGameMode<AREST_API_DemoGameMode>())
                 {
@@ -138,7 +132,7 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
                     if (AREST_API_DemoCharacter* NewPawn = GetWorld()->SpawnActor<AREST_API_DemoCharacter>(GM->DefaultPawnClass, Location, FRotator::ZeroRotator, SpawnParams))
                     {
 
-                        NewPawn->SetHealth(PlayerData.Health); // Sets character health
+                        NewPawn->SetHealth(PlayerData.health); // Sets character health
                         
                         // Saves retrieved current pawn/player stage attempts to the game instance
                         GameInstanceRef->SetBlueStageAttempts(PlayerData.bluestageattempts);         //NewPawn->SetBlueStageAttempts(PlayerData.bluestageattempts); 
@@ -155,22 +149,108 @@ void ADemoPlayerController::OnProcessRequestComplete(FHttpRequestPtr Request, FH
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("FAILED"));
-            playerConnectEstablished = false; // If player is not found playerConnectEstablished is set to false
+            //playerConnectEstablished = false; // If player is not found playerConnectEstablished is set to false
         }
     }
+    
 }
 
 FPlayerData ADemoPlayerController::ConvertToPlayerData(const FString& ResponseString)
 {
     FPlayerData PlayerData; // Creates empty PlayerData object
-    
-    if(!ResponseString.Contains("timestamp"))
+
+    if (!ResponseString.Contains("timestamp"))
     {
         FJsonObjectConverter::JsonObjectStringToUStruct(*ResponseString, &PlayerData, 0, 0); // Populates data retrieved from database into PlayerData
     }
-    
+
     return PlayerData; // Either returns populated PlayerData object if result is successful or empty PlayerData object if result is NULL
 }
+
+void ADemoPlayerController::OnProcessSignInRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success) {
+
+    FAuthenticationResponse JWT;
+
+
+    if (Success)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *Response->GetContentAsString());
+        JWT = ConvertToJWT(Response->GetContentAsString()); // Converts Contents in Json string to SignInData Struct
+        UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+        GameInstanceRef->SetJWT(JWT.jwt); // Saves JWT to the game instance
+        playerConnectEstablished = true; // If (PlayerData.isvalid) is true playerConnectEstablished is set to true
+
+    }
+    else {
+        UE_LOG(LogTemp, Warning, TEXT("FAILED"));
+        playerConnectEstablished = false; 
+    }
+}
+
+FAuthenticationResponse ADemoPlayerController::ConvertToJWT(const FString& ResponseString) {
+
+    FAuthenticationResponse JWT;
+
+
+    if (!ResponseString.Contains("timestamp"))
+    {
+        FJsonObjectConverter::JsonObjectStringToUStruct(*ResponseString, &JWT, 0, 0); // Populates data retrieved from database into PlayerData
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("JWT String: %s"), *JWT.jwt);
+
+    return JWT;
+
+}
+
+void ADemoPlayerController::UserSignIn(FString username, FString password) {
+
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
+
+    Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessSignInRequestComplete);
+
+    //POST Request 
+    Request->SetURL("http://localhost:8080/authenticate");
+    Request->SetVerb("POST"); // Post Request
+
+    Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+    // Post Request Code 
+    FString JsonString;
+    FSignInData SignInData;
+    SignInData.username = username;
+    SignInData.password = password;
+
+    FJsonObjectConverter::UStructToJsonObjectString(SignInData, JsonString);
+    Request->SetContentAsString(JsonString);
+    UE_LOG(LogTemp, Warning, TEXT("Json String %s"), *JsonString);
+
+    Request->ProcessRequest();
+
+}
+
+void ADemoPlayerController::CreatePlayer() {
+
+
+    UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+    FString JWTValue = GameInstanceRef->GetJWT();
+    FString email = GameInstanceRef->getUserEmail();
+
+    FString AuthorizationValue = "Bearer " + JWTValue;
+    
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
+
+    Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
+
+    // GET Request
+    Request->SetURL("http://localhost:8080/api/getPlayerData/" + email);
+    Request->SetVerb("GET"); //Get Request
+    Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+    Request->SetHeader(TEXT("Authorization"), AuthorizationValue);
+    Request->ProcessRequest();
+}
+
+
 
 void ADemoPlayerController::SaveData()
 {
@@ -189,31 +269,33 @@ void ADemoPlayerController::SaveData()
             FVector Location = ControlledCharacter->GetActorLocation();
             FPlayerData PlayerData;
             PlayerData.email = GameInstanceRef->getUserEmail(); // Retrieve user email 
-            PlayerData.userpassword = GameInstanceRef->getUserPassword(); // Retrieve user password 
             PlayerData.isvalid = true;
-            PlayerData.pid = 2626;
-            PlayerData.Health = ControlledCharacter->GetHealth();
+            PlayerData.health = ControlledCharacter->GetHealth();
 
             if (!ControlledCharacter->GetDidReachEnd()) {
-                PlayerData.Xcoord = Location.X;
-                PlayerData.Ycoord = Location.Y;
-                PlayerData.Zcoord = Location.Z;
+                PlayerData.xcoord = Location.X;
+                PlayerData.ycoord = Location.Y;
+                PlayerData.zcoord = Location.Z;
             }
             else {
-                PlayerData.Xcoord = 208.425f;
-                PlayerData.Ycoord = 2567.03f;
-                PlayerData.Zcoord = 424.192f;
+                PlayerData.xcoord = 208.425f;
+                PlayerData.ycoord = 2567.03f;
+                PlayerData.zcoord = 424.192f;
             }
             PlayerData.bluestageattempts = GameInstanceRef->GetBlueStageAttempts(); // ControlledCharacter->GetBlueStageAttempts();
             PlayerData.yellowstageattempts = GameInstanceRef->GetYellowStageAttempts(); // ControlledCharacter->GetYellowStageAttempts();
             PlayerData.redstageattempts = GameInstanceRef->GetRedStageAttempts(); // ControlledCharacter->GetRedStageAttempts();
 
+            FString JWTValue = GameInstanceRef->GetJWT();
+            FString AuthorizationValue = "Bearer " + JWTValue;
+
             TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 
             //Request->OnProcessRequestComplete().BindUObject(this, &ADemoPlayerController::OnProcessRequestComplete);
-            Request->SetURL("http://localhost:8080/api/PlayerData/updatePlayerData");
+            Request->SetURL("http://localhost:8080/api/updatePlayerData");
             Request->SetVerb("PUT"); // PUT Request
             Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+            Request->SetHeader(TEXT("Authorization"), AuthorizationValue);
 
             FString JsonString;
             FJsonObjectConverter::UStructToJsonObjectString(PlayerData, JsonString);

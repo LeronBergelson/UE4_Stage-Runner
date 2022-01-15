@@ -15,20 +15,16 @@ struct FPlayerData
 	GENERATED_BODY()
 	UPROPERTY()
     FString email = ""; 
-    UPROPERTY()
-    FString userpassword = ""; 
 	UPROPERTY()
 	bool isvalid = false; //requires lowercase
 	UPROPERTY()
-	int pid = -1;
+	float health = 100.0f;
 	UPROPERTY()
-	float Health = 100.0f;
+	float xcoord = 0.0f;
 	UPROPERTY()
-	float Xcoord = 0.0f;
+	float ycoord = 0.0f;
 	UPROPERTY()
-	float Ycoord = 0.0f;
-	UPROPERTY()
-	float Zcoord = 0.0f;
+	float zcoord = 0.0f;
 	UPROPERTY()
 	int bluestageattempts = 0;
 	UPROPERTY()
@@ -49,6 +45,24 @@ struct FCourseData
 	int yellowstagecompletiontime = 0;
 	UPROPERTY()
 	int redstagecompletiontime = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FSignInData
+{
+	GENERATED_BODY()
+	UPROPERTY()
+	FString username = "";
+	UPROPERTY()
+	FString password = "";
+};
+
+USTRUCT(BlueprintType)
+struct FAuthenticationResponse
+{
+	GENERATED_BODY()
+	UPROPERTY()
+	FString jwt = "";
 };
 
 UCLASS()
@@ -79,6 +93,9 @@ protected:
 	void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
 	FPlayerData ConvertToPlayerData(const FString& ResponseString);
 	
+	void OnProcessSignInRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool Success);
+	FAuthenticationResponse ConvertToJWT(const FString& ResponseString);
+
 	UFUNCTION(BlueprintCallable)
 	void SaveData();
 	
@@ -119,6 +136,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetUserPassword() const {return userPassword;}
 	
+	UFUNCTION(BlueprintCallable)
+	void UserSignIn(FString username, FString password);
+
+	UFUNCTION(BlueprintCallable)
+	void CreatePlayer();
+
 	UFUNCTION(BlueprintCallable)
 	bool SaveDataRepeater(bool activeState);
 };

@@ -6,6 +6,11 @@
 UAPI_Info_GameInstance::UAPI_Info_GameInstance() {
     userEmail = "";
     userPasswordVal = "";
+    JWT = "";
+    playerHealth = 100;
+    blueStageAttempts = 0;
+    yellowStageAttempts = 0;
+    redStageAttempts = 0;
 }
 
 void UAPI_Info_GameInstance::SetUserEmail(FString NewUserEmail) {
@@ -40,4 +45,8 @@ void UAPI_Info_GameInstance::SetYellowStageAttempts(int attemptNum)
 void UAPI_Info_GameInstance::SetRedStageAttempts(int attemptNum)
 {
     redStageAttempts = attemptNum;
+}
+
+void UAPI_Info_GameInstance::SetJWT(FString Token) {
+    JWT = Token;
 }

@@ -27,14 +27,18 @@ protected:
     int yellowStageAttempts;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerInfo")
     int redStageAttempts;
+    UPROPERTY()
+    FString JWT;
 
 public:
 
     UAPI_Info_GameInstance();
     
     //Getter
+    UFUNCTION()
     FString getUserEmail() {return userEmail;}
     //Setter
+    UFUNCTION()
     void SetUserEmail(FString NewUserEmail);
 
     //Getter
@@ -72,7 +76,12 @@ public:
     UFUNCTION(BlueprintCallable)
     void SetRedStageAttempts(int attemptNum);
 
-
+    //Getter
+    UFUNCTION(BlueprintCallable)
+    FString GetJWT() { return JWT; }
+    //Setter
+    UFUNCTION(BlueprintCallable)
+    void SetJWT(FString Token);
 
 
 
