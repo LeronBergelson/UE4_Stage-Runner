@@ -65,13 +65,17 @@ void ADemoPlayerController::SaveCourseData(int blueStageCompletionTime, int yell
     UAPI_Info_GameInstance* GameInstanceRef = Cast<UAPI_Info_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
     FString tempUserEmail = GameInstanceRef->getUserEmail();
+    FString JWTValue = GameInstanceRef->GetJWT();
+
+    FString AuthorizationValue = "Bearer " + JWTValue;
 
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = Http->CreateRequest();
 
     //POST Request 
-    Request->SetURL("http://localhost:8080/api/ColouredCourseData/update");
+    Request->SetURL("http://localhost:8080/api/PostPlayerCourseData/");
     Request->SetVerb("POST"); // Post Request
     Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+    Request->SetHeader(TEXT("Authorization"), AuthorizationValue);
 
     // Post Request Code 
     FString JsonString;
